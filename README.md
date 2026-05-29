@@ -162,6 +162,17 @@ npm run seed
 - `/import-export`
 - `/settings`
 - `/ai/review`
+- `/api/health`
+
+## 健康检查
+
+部署后可以直接访问：
+
+```bash
+/api/health
+```
+
+返回 `200` 说明应用和数据库都可用；返回 `503` 说明应用起来了，但数据库连接异常。
 
 ## Excel 导入导出
 

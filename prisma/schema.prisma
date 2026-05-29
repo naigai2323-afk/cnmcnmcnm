@@ -1,0 +1,326 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  admin
+  manager
+  staff
+}
+
+enum ArrivalStatus {
+  pending
+  partial
+  arrived
+  abnormal
+}
+
+enum OrderStatus {
+  pending
+  producing
+  partially_shipped
+  shipped
+  cancelled
+}
+
+enum ProductType {
+  finished_good
+  semi_finished
+}
+
+enum EmployeeType {
+  formal
+  direct_temp
+  labor_dispatch
+}
+
+enum EmploymentStatus {
+  active
+  inactive
+}
+
+enum SalaryType {
+  monthly
+  daily
+  hourly
+  piece
+}
+
+enum DataSource {
+  manual
+  excel
+  dingtalk
+  feishu
+}
+
+enum CostType {
+  electricity
+  depreciation
+  social_security
+  rent
+  management
+  logistics
+  packaging
+  other
+}
+
+enum AllocationMethod {
+  daily_fixed
+  monthly_average
+  manual
+}
+
+enum FeishuMessageStatus {
+  pending
+  parsed
+  approved
+  rejected
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(staff)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model PurchaseRecord {
+  id              Int           @id @default(autoincrement())
+  date            DateTime      @db.Date
+  purchaseOrderNo String        @map("purchase_order_no")
+  supplier        String
+  materialName    String        @map("material_name")
+  specification   String?
+  quantity        Decimal       @db.Decimal(14, 2)
+  unit            String
+  unitPrice       Decimal       @map("unit_price") @db.Decimal(14, 2)
+  amount          Decimal       @db.Decimal(14, 2)
+  buyer           String?
+  arrivalStatus   ArrivalStatus @default(pending) @map("arrival_status")
+  remark          String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@map("purchase_records")
+}
+
+model WarehouseReceipt {
+  id                 Int      @id @default(autoincrement())
+  date               DateTime @db.Date
+  purchaseOrderNo    String   @map("purchase_order_no")
+  supplier           String
+  materialName       String   @map("material_name")
+  specification      String?
+  expectedQuantity   Decimal  @map("expected_quantity") @db.Decimal(14, 2)
+  receivedQuantity   Decimal  @map("received_quantity") @db.Decimal(14, 2)
+  differenceQuantity Decimal  @map("difference_quantity") @db.Decimal(14, 2)
+  unit               String
+  warehouseName      String?  @map("warehouse_name")
+  receiver           String?
+  abnormalNote       String?  @map("abnormal_note")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("warehouse_receipts")
+}
+
+model SalesOrder {
+  id            Int         @id @default(autoincrement())
+  date          DateTime    @db.Date
+  orderNo       String      @unique @map("order_no")
+  customerName  String      @map("customer_name")
+  productName   String      @map("product_name")
+  specification String?
+  orderQuantity Decimal     @map("order_quantity") @db.Decimal(14, 2)
+  unit          String
+  unitPrice     Decimal     @map("unit_price") @db.Decimal(14, 2)
+  orderAmount   Decimal     @map("order_amount") @db.Decimal(14, 2)
+  deliveryDate  DateTime?   @map("delivery_date") @db.Date
+  orderStatus   OrderStatus @default(pending) @map("order_status")
+  salesperson   String?
+  remark        String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@map("sales_orders")
+}
+
+model ProductionMaterialRequisition {
+  id                Int      @id @default(autoincrement())
+  date              DateTime @db.Date
+  productionOrderNo String   @map("production_order_no")
+  orderNo           String?  @map("order_no")
+  materialName      String   @map("material_name")
+  specification     String?
+  quantity          Decimal  @db.Decimal(14, 2)
+  unit              String
+  unitPrice         Decimal  @map("unit_price") @db.Decimal(14, 2)
+  amount            Decimal  @db.Decimal(14, 2)
+  receiver          String?
+  purpose           String?
+  remark            String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("production_material_requisitions")
+}
+
+model ProductionStockIn {
+  id                Int         @id @default(autoincrement())
+  date              DateTime    @db.Date
+  productionOrderNo String      @map("production_order_no")
+  orderNo           String?     @map("order_no")
+  productType       ProductType @map("product_type")
+  productName       String      @map("product_name")
+  specification     String?
+  stockInQuantity   Decimal     @map("stock_in_quantity") @db.Decimal(14, 2)
+  goodQuantity      Decimal     @map("good_quantity") @db.Decimal(14, 2)
+  defectiveQuantity Decimal     @map("defective_quantity") @db.Decimal(14, 2)
+  yieldRate         Decimal     @map("yield_rate") @db.Decimal(8, 2)
+  warehouseName     String?     @map("warehouse_name")
+  operator          String?
+  remark            String?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  @@map("production_stock_ins")
+}
+
+model OrderShipment {
+  id                 Int      @id @default(autoincrement())
+  date               DateTime @db.Date
+  orderNo            String   @map("order_no")
+  customerName       String   @map("customer_name")
+  productName        String   @map("product_name")
+  expectedQuantity   Decimal  @map("expected_quantity") @db.Decimal(14, 2)
+  shippedQuantity    Decimal  @map("shipped_quantity") @db.Decimal(14, 2)
+  unshippedQuantity  Decimal  @map("unshipped_quantity") @db.Decimal(14, 2)
+  unit               String
+  shipmentAmount     Decimal  @map("shipment_amount") @db.Decimal(14, 2)
+  logisticsNo        String?  @map("logistics_no")
+  shipper            String?
+  remark             String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("order_shipments")
+}
+
+model Employee {
+  id                        Int              @id @default(autoincrement())
+  name                      String
+  employeeNo                String           @unique @map("employee_no")
+  department                String
+  employeeType              EmployeeType     @map("employee_type")
+  employmentStatus          EmploymentStatus @default(active) @map("employment_status")
+  salaryType                SalaryType       @map("salary_type")
+  monthlySalary             Decimal?         @map("monthly_salary") @db.Decimal(14, 2)
+  dailyWage                 Decimal?         @map("daily_wage") @db.Decimal(14, 2)
+  hourlyWage                Decimal?         @map("hourly_wage") @db.Decimal(14, 2)
+  pieceRate                 Decimal?         @map("piece_rate") @db.Decimal(14, 2)
+  socialSecurityCostMonthly Decimal?         @map("social_security_cost_monthly") @db.Decimal(14, 2)
+  remark                    String?
+  attendanceRecords         AttendanceRecord[]
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
+
+  @@map("employees")
+}
+
+model AttendanceRecord {
+  id             Int          @id @default(autoincrement())
+  date           DateTime     @db.Date
+  employeeId     Int?         @map("employee_id")
+  employeeName   String       @map("employee_name")
+  employeeType   EmployeeType @map("employee_type")
+  department     String
+  checkInTime    DateTime?    @map("check_in_time")
+  checkOutTime   DateTime?    @map("check_out_time")
+  regularHours   Decimal      @map("regular_hours") @db.Decimal(8, 2)
+  overtimeHours  Decimal      @map("overtime_hours") @db.Decimal(8, 2)
+  totalHours     Decimal      @map("total_hours") @db.Decimal(8, 2)
+  dailyLaborCost Decimal      @map("daily_labor_cost") @db.Decimal(14, 2)
+  dataSource     DataSource   @default(manual) @map("data_source")
+  remark         String?
+  employee       Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("attendance_records")
+}
+
+model CostSetting {
+  id               Int              @id @default(autoincrement())
+  name             String
+  costType         CostType         @map("cost_type")
+  amount           Decimal          @db.Decimal(14, 2)
+  allocationMethod AllocationMethod @map("allocation_method")
+  effectiveDate    DateTime         @map("effective_date") @db.Date
+  remark           String?
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@map("cost_settings")
+}
+
+model DailyCost {
+  id                 Int      @id @default(autoincrement())
+  date               DateTime @unique @db.Date
+  materialCost       Decimal  @default(0) @map("material_cost") @db.Decimal(14, 2)
+  laborCost          Decimal  @default(0) @map("labor_cost") @db.Decimal(14, 2)
+  electricityCost    Decimal  @default(0) @map("electricity_cost") @db.Decimal(14, 2)
+  depreciationCost   Decimal  @default(0) @map("depreciation_cost") @db.Decimal(14, 2)
+  socialSecurityCost Decimal  @default(0) @map("social_security_cost") @db.Decimal(14, 2)
+  rentCost           Decimal  @default(0) @map("rent_cost") @db.Decimal(14, 2)
+  logisticsCost      Decimal  @default(0) @map("logistics_cost") @db.Decimal(14, 2)
+  packagingCost      Decimal  @default(0) @map("packaging_cost") @db.Decimal(14, 2)
+  managementCost     Decimal  @default(0) @map("management_cost") @db.Decimal(14, 2)
+  otherCost          Decimal  @default(0) @map("other_cost") @db.Decimal(14, 2)
+  totalCost          Decimal  @default(0) @map("total_cost") @db.Decimal(14, 2)
+  orderAmount        Decimal  @default(0) @map("order_amount") @db.Decimal(14, 2)
+  shipmentAmount     Decimal  @default(0) @map("shipment_amount") @db.Decimal(14, 2)
+  estimatedProfit    Decimal  @default(0) @map("estimated_profit") @db.Decimal(14, 2)
+  estimatedProfitRate Decimal @default(0) @map("estimated_profit_rate") @db.Decimal(8, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_costs")
+}
+
+model FeishuMessage {
+  id         Int                 @id @default(autoincrement())
+  messageId  String?             @map("message_id")
+  senderName String?             @map("sender_name")
+  senderId   String?             @map("sender_id")
+  groupId    String?             @map("group_id")
+  rawText    String              @map("raw_text")
+  parsedJson Json?               @map("parsed_json")
+  moduleType String?             @map("module_type")
+  status     FeishuMessageStatus @default(pending)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@map("feishu_messages")
+}
+
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?
+  remark    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { env } from "@/lib/env";
 
 const COOKIE_NAME = "factory_session";
 
@@ -41,7 +40,7 @@ export async function setSession(user: SessionUser) {
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 12,
-    secure: env.NODE_ENV === "production"
+    secure: process.env.NODE_ENV === "production"
   });
 }
 
